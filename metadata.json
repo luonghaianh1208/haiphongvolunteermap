@@ -1,0 +1,10 @@
+{
+  "name": "Bản đồ số Nền tảng điều phối TNV Hải Phòng",
+  "description": "Nền tảng số giúp kết nối, điều phối và quản lý đoàn viên thanh niên Hải Phòng tham gia các hoạt động tình nguyện.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
