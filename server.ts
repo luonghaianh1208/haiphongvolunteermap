@@ -5,6 +5,7 @@ import statsRouter from './src/routes/stats.ts';
 import usersRouter from './src/routes/users.ts';
 import activitiesRouter from './src/routes/activities.ts';
 import leaderboardRouter from './src/routes/leaderboard.ts';
+import unitsRouter from './src/routes/units.ts';
 import { errorHandler } from './src/middleware/error-handler.ts';
 
 async function startServer() {
@@ -17,6 +18,7 @@ async function startServer() {
   app.use(usersRouter);
   app.use(activitiesRouter);
   app.use(leaderboardRouter);
+  app.use(unitsRouter);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
