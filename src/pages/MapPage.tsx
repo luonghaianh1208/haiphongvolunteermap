@@ -76,7 +76,7 @@ export default function MapPage() {
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-blue-950 flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-blue-700" /> Bản Đồ Số Tình Nguyện Hải Phòng
+            <MapPin className="w-5 h-5 text-blue-700" /> Bản đồ số Thanh niên tình nguyện Hải Phòng
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">Giám sát các điểm hoạt động và điều phối lực lượng theo thời gian thực</p>
         </div>

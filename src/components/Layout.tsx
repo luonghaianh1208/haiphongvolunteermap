@@ -67,7 +67,7 @@ function Layout() {
           <Link 
             to="/" 
             className="flex items-center gap-3 group focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-blue-700 rounded-xl p-1"
-            aria-label="Trang chủ TNV Hải Phòng"
+            aria-label="Trang chủ — Bản đồ số Thanh niên tình nguyện Hải Phòng"
           >
             <motion.div 
               whileHover={{ scale: 1.05, rotate: 3 }}
@@ -81,7 +81,7 @@ function Layout() {
                 TNV HẢI PHÒNG
               </span>
               <span className="text-[10px] text-blue-100 tracking-wider uppercase font-medium hidden sm:block">
-                Bản đồ số & Điều phối tình nguyện
+                Bản đồ số Thanh niên tình nguyện Hải Phòng
               </span>
             </div>
           </Link>
