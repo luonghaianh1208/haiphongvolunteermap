@@ -5,6 +5,7 @@ import statsRouter from './src/routes/stats.ts';
 import usersRouter from './src/routes/users.ts';
 import activitiesRouter from './src/routes/activities.ts';
 import leaderboardRouter from './src/routes/leaderboard.ts';
+import { errorHandler } from './src/middleware/error-handler.ts';
 
 async function startServer() {
   const app = express();
@@ -31,6 +32,8 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  app.use(errorHandler);
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
