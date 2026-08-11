@@ -10,6 +10,7 @@ import { Users, FileText, CheckCircle, Clock, ShieldAlert, BarChart3, Plus, Chec
 import { useAuth } from '../lib/auth-context.tsx';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
+import UnitsManager from '../components/admin/UnitsManager.tsx';
 
 export default function DashboardPage() {
   const { user, dbUser } = useAuth();
@@ -292,6 +293,8 @@ export default function DashboardPage() {
           </table>
         </CardContent>
       </Card>
+
+      {dbUser?.role === 'thanh_doan' && <UnitsManager />}
 
       {/* Create Activity Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
