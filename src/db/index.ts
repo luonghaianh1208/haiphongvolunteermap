@@ -4,6 +4,10 @@ import * as schema from './schema.ts';
 
 const { Pool } = pg;
 
+// SQL_SSL: mặc định bật SSL (bắt buộc với Supabase). Đặt SQL_SSL=false để tắt khi
+// chạy Postgres cục bộ không có SSL trong lúc phát triển.
+const sslEnabled = process.env.SQL_SSL !== 'false';
+
 export const createPool = () => {
   return new Pool({
     host: process.env.SQL_HOST,
@@ -11,6 +15,10 @@ export const createPool = () => {
     password: process.env.SQL_PASSWORD,
     database: process.env.SQL_DB_NAME,
     connectionTimeoutMillis: 15000,
+    // rejectUnauthorized: false vì Supabase dùng chứng chỉ do CA riêng của họ ký,
+    // không nằm trong kho CA gốc của Node. Đặt true mà không cung cấp CA của Supabase
+    // sẽ khiến kết nối luôn thất bại. Đây là đánh đổi có ý thức, không phải sơ suất.
+    ssl: sslEnabled ? { rejectUnauthorized: false } : false,
   });
 };
 

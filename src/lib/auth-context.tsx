@@ -9,6 +9,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  syncProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -61,8 +62,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await firebaseSignOut(auth);
   };
 
+  const syncProfile = async () => {
+    if (!user) return;
+    await fetchDbUser(user);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, dbUser, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, dbUser, loading, signIn, signOut, syncProfile }}>
       {children}
     </AuthContext.Provider>
   );
