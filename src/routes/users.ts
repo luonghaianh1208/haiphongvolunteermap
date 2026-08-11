@@ -22,9 +22,12 @@ router.post('/api/user/profile', requireAuth, asyncHandler(async (req: AuthReque
   if (!req.user) {
     throw new HttpError(401, 'Unauthorized');
   }
-  const { fullName, dob, gender, cccd, phone, address, unit, skills } = req.body;
+  const { fullName, dob, gender, cccd, phone, address, unit, skills, unitId } = req.body;
   const updated = await db.update(users)
-    .set({ fullName, dob, gender, cccd, phone, address, unit, skills })
+    .set({
+      fullName, dob, gender, cccd, phone, address, unit, skills,
+      unitId: unitId === null || unitId === undefined || unitId === '' ? null : Number(unitId),
+    })
     .where(eq(users.uid, req.user.uid))
     .returning();
 

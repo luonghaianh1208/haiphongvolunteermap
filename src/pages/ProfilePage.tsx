@@ -16,12 +16,14 @@ export default function ProfilePage() {
   const [isCertOpen, setIsCertOpen] = useState(false);
   const [myActivities, setMyActivities] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [unitOptions, setUnitOptions] = useState<{ id: number; name: string }[]>([]);
 
   // Profile Edit State
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
     unit: '',
+    unitId: '' as string,
     skills: '',
     address: '',
     cccd: ''
@@ -33,6 +35,7 @@ export default function ProfilePage() {
         fullName: dbUser.fullName || '',
         phone: dbUser.phone || '',
         unit: dbUser.unit || '',
+        unitId: dbUser.unitId ? String(dbUser.unitId) : '',
         skills: dbUser.skills || '',
         address: dbUser.address || '',
         cccd: dbUser.cccd || ''
@@ -41,6 +44,13 @@ export default function ProfilePage() {
 
     fetchMyActivities();
   }, [dbUser]);
+
+  useEffect(() => {
+    fetch('/api/units')
+      .then(res => res.json())
+      .then(data => setUnitOptions(data.units || []))
+      .catch(console.error);
+  }, []);
 
   const fetchMyActivities = () => {
     if (!user) return;
@@ -328,6 +338,26 @@ export default function ProfilePage() {
                 className="rounded-xl h-10 text-sm"
                 placeholder="VD: Trường ĐH Hàng hải Việt Nam"
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="unitId" className="text-xs font-bold text-slate-700">Đơn vị Đoàn trực thuộc</Label>
+              <select
+                id="unitId"
+                value={formData.unitId}
+                onChange={(e) => setFormData({ ...formData, unitId: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium"
+              >
+                <option value="">— Chưa chọn đơn vị —</option>
+                {unitOptions.map((u) => (
+                  <option key={u.id} value={String(u.id)}>{u.name}</option>
+                ))}
+              </select>
+              {formData.unitId === '' && (
+                <p className="text-[11px] text-amber-600 font-medium">
+                  Chọn đơn vị Đoàn để được tính vào bảng xếp hạng đơn vị.
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
