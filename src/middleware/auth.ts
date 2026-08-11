@@ -28,3 +28,27 @@ export const requireAuth = async (
     return;
   }
 };
+
+/**
+ * Giống requireAuth nhưng KHÔNG chặn khi thiếu/sai token.
+ * Chỉ gắn req.user nếu token hợp lệ. Dùng cho route công khai
+ * nhưng có hành vi khác cho cán bộ.
+ */
+export const optionalAuth = async (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    next();
+    return;
+  }
+  const token = authHeader.split('Bearer ')[1];
+  try {
+    req.user = await adminAuth.verifyIdToken(token);
+  } catch {
+    // Token hỏng thì coi như khách, không báo lỗi
+  }
+  next();
+};

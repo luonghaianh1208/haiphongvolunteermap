@@ -43,10 +43,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchActivities();
-  }, []);
+  }, [user]);
 
-  const fetchActivities = () => {
-    fetch('/api/activities')
+  const fetchActivities = async () => {
+    if (!user) return;
+    const token = await user.getIdToken();
+    fetch('/api/activities?status=all', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setActivities(data);

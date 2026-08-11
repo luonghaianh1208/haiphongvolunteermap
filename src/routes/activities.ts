@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { requireAuth, AuthRequest } from '../middleware/auth.ts';
+import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth.ts';
+import { getUserRole, STAFF_ROLES } from '../middleware/require-role.ts';
 import { getOrCreateUser } from '../db/users.ts';
 import { db } from '../db/index.ts';
 import { activities, activityRegistrations, users } from '../db/schema.ts';
@@ -9,8 +10,20 @@ import { HttpError, asyncHandler } from '../lib/http-error.ts';
 const router = Router();
 
 // Lấy danh sách hoạt động kèm số lượng đã đăng ký
-router.get('/api/activities', asyncHandler(async (req, res) => {
-  const allActivities = await db.select().from(activities).orderBy(desc(activities.createdAt));
+router.get('/api/activities', optionalAuth, asyncHandler(async (req: AuthRequest, res) => {
+  const role = await getUserRole(req);
+  const isStaff = role !== null && STAFF_ROLES.includes(role);
+
+  // Khách và TNV: chỉ thấy hoạt động đã duyệt, bất kể truyền tham số gì
+  // Cán bộ: được lọc theo ?status=pending|rejected|approved|all
+  const requested = typeof req.query.status === 'string' ? req.query.status : 'approved';
+  const effective = isStaff ? requested : 'approved';
+
+  const allActivities = effective === 'all'
+    ? await db.select().from(activities).orderBy(desc(activities.createdAt))
+    : await db.select().from(activities)
+        .where(eq(activities.status, effective))
+        .orderBy(desc(activities.createdAt));
 
   // Calculate registrations count for each activity
   const regCounts = await db.select({
