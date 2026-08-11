@@ -80,7 +80,7 @@ function Layout() {
               <span className="text-base sm:text-lg font-extrabold tracking-tight text-white uppercase leading-tight group-hover:text-sky-200 transition-colors">
                 TNV HẢI PHÒNG
               </span>
-              <span className="text-[10px] text-blue-100 tracking-wider uppercase font-medium hidden sm:block">
+              <span className="text-[10px] text-blue-100 tracking-wider uppercase font-medium hidden sm:block truncate max-w-[240px]">
                 Bản đồ số Thanh niên tình nguyện Hải Phòng
               </span>
             </div>
