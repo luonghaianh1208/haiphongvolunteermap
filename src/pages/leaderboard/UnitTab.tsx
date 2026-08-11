@@ -8,14 +8,21 @@ export default function UnitTab() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let huy = false;
     setLoading(true);
     fetch(`/api/leaderboard/units?sort=${sort}`)
       .then(res => res.json())
       .then(data => {
+        if (huy) return;
         setTopUnits(data.topUnits || []);
         setLoading(false);
       })
-      .catch(err => { console.error(err); setLoading(false); });
+      .catch(err => {
+        if (huy) return;
+        console.error(err);
+        setLoading(false);
+      });
+    return () => { huy = true; };
   }, [sort]);
 
   return (

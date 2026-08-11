@@ -23,10 +23,24 @@ router.post('/api/user/profile', requireAuth, asyncHandler(async (req: AuthReque
     throw new HttpError(401, 'Unauthorized');
   }
   const { fullName, dob, gender, cccd, phone, address, unit, skills, unitId } = req.body;
+
+  let unitIdValue: number | null | undefined;
+  if (unitId === undefined) {
+    unitIdValue = undefined; // Trường vắng mặt: giữ nguyên giá trị cũ (Drizzle bỏ qua)
+  } else if (unitId === null || unitId === '') {
+    unitIdValue = null; // Chủ ý bỏ chọn đơn vị
+  } else {
+    const parsed = Number(unitId);
+    if (Number.isNaN(parsed)) {
+      throw new HttpError(400, 'Mã đơn vị không hợp lệ');
+    }
+    unitIdValue = parsed;
+  }
+
   const updated = await db.update(users)
     .set({
       fullName, dob, gender, cccd, phone, address, unit, skills,
-      unitId: unitId === null || unitId === undefined || unitId === '' ? null : Number(unitId),
+      unitId: unitIdValue,
     })
     .where(eq(users.uid, req.user.uid))
     .returning();

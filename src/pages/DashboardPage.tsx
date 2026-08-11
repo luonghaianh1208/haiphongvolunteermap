@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, FormEvent } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card.tsx';
 import { Button } from '../components/ui/button.tsx';
 import { Input } from '../components/ui/input.tsx';
@@ -59,7 +59,7 @@ export default function DashboardPage() {
       .catch(console.error);
   };
 
-  const handleCreateActivity = async (e: React.FormEvent) => {
+  const handleCreateActivity = async (e: FormEvent) => {
     e.preventDefault();
     if (!user) {
       toast.error('Vui lòng đăng nhập để tạo chiến dịch');

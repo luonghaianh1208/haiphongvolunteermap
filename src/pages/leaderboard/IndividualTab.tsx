@@ -40,6 +40,7 @@ export function getRankBadge(index: number) {
 export default function IndividualTab() {
   const [topVolunteers, setTopVolunteers] = useState<any[]>([]);
   const [unitOptions, setUnitOptions] = useState<{ id: number; name: string }[]>([]);
+  const [unitsError, setUnitsError] = useState(false);
   const [unitFilter, setUnitFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
@@ -47,19 +48,29 @@ export default function IndividualTab() {
     fetch('/api/units')
       .then(res => res.json())
       .then(data => setUnitOptions(data.units || []))
-      .catch(console.error);
+      .catch(err => {
+        console.error(err);
+        setUnitsError(true);
+      });
   }, []);
 
   useEffect(() => {
+    let huy = false;
     setLoading(true);
     const url = unitFilter === 'all' ? '/api/leaderboard' : `/api/leaderboard?unitId=${unitFilter}`;
     fetch(url)
       .then(res => res.json())
       .then(data => {
+        if (huy) return;
         setTopVolunteers(data.topVolunteers || []);
         setLoading(false);
       })
-      .catch(err => { console.error(err); setLoading(false); });
+      .catch(err => {
+        if (huy) return;
+        console.error(err);
+        setLoading(false);
+      });
+    return () => { huy = true; };
   }, [unitFilter]);
 
   return (
@@ -76,6 +87,11 @@ export default function IndividualTab() {
             <option key={u.id} value={String(u.id)}>{u.name}</option>
           ))}
         </select>
+        {unitsError && (
+          <p className="text-[11px] text-red-600 font-medium mt-1.5">
+            Không tải được danh sách đơn vị. Vui lòng thử lại sau.
+          </p>
+        )}
       </div>
 
       {loading ? (

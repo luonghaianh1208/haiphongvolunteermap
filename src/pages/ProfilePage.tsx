@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useAuth } from '../lib/auth-context.tsx';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../components/ui/card.tsx';
 import { Badge } from '../components/ui/badge.tsx';
@@ -17,6 +17,7 @@ export default function ProfilePage() {
   const [myActivities, setMyActivities] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [unitOptions, setUnitOptions] = useState<{ id: number; name: string }[]>([]);
+  const [unitsError, setUnitsError] = useState(false);
 
   // Profile Edit State
   const [formData, setFormData] = useState({
@@ -49,7 +50,10 @@ export default function ProfilePage() {
     fetch('/api/units')
       .then(res => res.json())
       .then(data => setUnitOptions(data.units || []))
-      .catch(console.error);
+      .catch(err => {
+        console.error(err);
+        setUnitsError(true);
+      });
   }, []);
 
   const fetchMyActivities = () => {
@@ -66,7 +70,7 @@ export default function ProfilePage() {
     });
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
@@ -349,6 +353,11 @@ export default function ProfilePage() {
                 className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium"
               >
                 <option value="">— Chưa chọn đơn vị —</option>
+                {dbUser?.unitId != null && !unitOptions.some((u) => u.id === dbUser.unitId) && (
+                  <option value={String(dbUser.unitId)}>
+                    {(dbUser.unitName || 'Đơn vị hiện tại')} (đã ngừng hoạt động)
+                  </option>
+                )}
                 {unitOptions.map((u) => (
                   <option key={u.id} value={String(u.id)}>{u.name}</option>
                 ))}
@@ -356,6 +365,11 @@ export default function ProfilePage() {
               {formData.unitId === '' && (
                 <p className="text-[11px] text-amber-600 font-medium">
                   Chọn đơn vị Đoàn để được tính vào bảng xếp hạng đơn vị.
+                </p>
+              )}
+              {unitsError && (
+                <p className="text-[11px] text-red-600 font-medium">
+                  Không tải được danh sách đơn vị. Vui lòng thử lại sau.
                 </p>
               )}
             </div>
