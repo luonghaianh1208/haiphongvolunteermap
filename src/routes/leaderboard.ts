@@ -25,12 +25,20 @@ router.get('/api/leaderboard', asyncHandler(async (req, res) => {
     isVerified: users.isVerified,
   };
 
-  // Lọc TRƯỚC rồi mới cắt 10 — nếu làm ngược lại, đơn vị nhỏ sẽ ra bảng trống
-  const base = db.select(columns).from(users).leftJoin(units, eq(users.unitId, units.id));
-
+  // Lọc TRƯỚC rồi mới cắt 10 — nếu làm ngược lại, đơn vị nhỏ sẽ ra bảng trống.
+  // Builder của Drizzle đột biến (mutate) chính nó thay vì clone, nên KHÔNG được
+  // dùng chung một biến builder rồi gọi .where() theo nhánh — mỗi nhánh phải tự
+  // dựng builder riêng để tránh rò trạng thái giữa các request.
   const topVolunteers = (unitId !== null && !Number.isNaN(unitId))
-    ? await base.where(eq(users.unitId, unitId)).orderBy(desc(users.reputationPoints)).limit(10)
-    : await base.orderBy(desc(users.reputationPoints)).limit(10);
+    ? await db.select(columns).from(users)
+        .leftJoin(units, eq(users.unitId, units.id))
+        .where(eq(users.unitId, unitId))
+        .orderBy(desc(users.reputationPoints))
+        .limit(10)
+    : await db.select(columns).from(users)
+        .leftJoin(units, eq(users.unitId, units.id))
+        .orderBy(desc(users.reputationPoints))
+        .limit(10);
 
   res.json({ topVolunteers });
 }));
