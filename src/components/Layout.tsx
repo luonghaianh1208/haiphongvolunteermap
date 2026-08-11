@@ -64,9 +64,9 @@ function Layout() {
       <header className="sticky top-0 z-50 w-full bg-blue-700/95 backdrop-blur-md text-white shadow-sm border-b border-blue-600/50 transition-all">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link 
-            to="/" 
-            className="flex items-center gap-3 group focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-blue-700 rounded-xl p-1"
+          <Link
+            to="/"
+            className="flex items-center gap-3 group focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-blue-700 rounded-xl p-1 min-w-0"
             aria-label="Trang chủ — Bản đồ số Thanh niên tình nguyện Hải Phòng"
           >
             <motion.div 
@@ -76,11 +76,11 @@ function Layout() {
             >
               <span className="text-blue-700 font-black text-base tracking-tight">ĐOÀN</span>
             </motion.div>
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <span className="text-base sm:text-lg font-extrabold tracking-tight text-white uppercase leading-tight group-hover:text-sky-200 transition-colors">
                 TNV HẢI PHÒNG
               </span>
-              <span className="text-[10px] text-blue-100 tracking-wider uppercase font-medium hidden sm:block truncate max-w-[240px]">
+              <span className="text-[10px] text-blue-100 tracking-wider uppercase font-medium hidden sm:block truncate max-w-[280px]">
                 Bản đồ số Thanh niên tình nguyện Hải Phòng
               </span>
             </div>
