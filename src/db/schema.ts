@@ -1,6 +1,15 @@
 import { relations } from 'drizzle-orm';
 import { integer, pgTable, serial, text, timestamp, boolean, doublePrecision } from 'drizzle-orm/pg-core';
 
+export const units = pgTable('units', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  // 'dia_ban' | 'truong_hoc' | 'doanh_nghiep' | 'luc_luong_vu_trang'
+  type: text('type').notNull().default('dia_ban'),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   uid: text('uid').notNull().unique(), // Firebase Auth UID
@@ -12,7 +21,7 @@ export const users = pgTable('users', {
   phone: text('phone'),
   address: text('address'),
   unit: text('unit'), // Đơn vị học tập/công tác
-  unionUnit: text('union_unit'), // Đơn vị Đoàn
+  unitId: integer('unit_id').references(() => units.id), // Đơn vị Đoàn, NULL nếu chưa chọn
   skills: text('skills'),
   
   role: text('role').default('tnv'), // 'thanh_doan', 'doan_co_so', 'tnv'
@@ -53,9 +62,17 @@ export const activityRegistrations = pgTable('activity_registrations', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   activitiesOrganized: many(activities),
   registrations: many(activityRegistrations),
+  unit: one(units, {
+    fields: [users.unitId],
+    references: [units.id],
+  }),
+}));
+
+export const unitsRelations = relations(units, ({ many }) => ({
+  members: many(users),
 }));
 
 export const activitiesRelations = relations(activities, ({ one, many }) => ({

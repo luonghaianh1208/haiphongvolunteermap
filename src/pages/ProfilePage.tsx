@@ -22,7 +22,6 @@ export default function ProfilePage() {
     fullName: '',
     phone: '',
     unit: '',
-    unionUnit: '',
     skills: '',
     address: '',
     cccd: ''
@@ -34,7 +33,6 @@ export default function ProfilePage() {
         fullName: dbUser.fullName || '',
         phone: dbUser.phone || '',
         unit: dbUser.unit || '',
-        unionUnit: dbUser.unionUnit || '',
         skills: dbUser.skills || '',
         address: dbUser.address || '',
         cccd: dbUser.cccd || ''
@@ -216,7 +214,7 @@ export default function ProfilePage() {
             </div>
             <div className="space-y-1">
               <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block">Đơn vị Đoàn trực thuộc</span>
-              <span className="font-semibold text-slate-900">{dbUser?.unionUnit || 'Đoàn Thanh Niên Hải Phòng'}</span>
+              <span className="font-semibold text-slate-900">{dbUser?.unitName || 'Chưa chọn đơn vị'}</span>
             </div>
             <div className="space-y-1">
               <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block">Đơn vị học tập / công tác</span>
@@ -329,17 +327,6 @@ export default function ProfilePage() {
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                 className="rounded-xl h-10 text-sm"
                 placeholder="VD: Trường ĐH Hàng hải Việt Nam"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="unionUnit" className="text-xs font-bold text-slate-700">Đoàn cơ sở trực thuộc</Label>
-              <Input
-                id="unionUnit"
-                value={formData.unionUnit}
-                onChange={(e) => setFormData({ ...formData, unionUnit: e.target.value })}
-                className="rounded-xl h-10 text-sm"
-                placeholder="VD: Quận Đoàn Lê Chân"
               />
             </div>
 

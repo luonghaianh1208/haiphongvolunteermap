@@ -127,7 +127,7 @@ export default function LeaderboardPage() {
                           )}
                         </div>
                         <div className="text-xs text-slate-500">
-                          {vol.unionUnit || 'Đoàn cơ sở Hải Phòng'}
+                          {vol.unitName || 'Chưa chọn đơn vị'}
                         </div>
                       </div>
                     </div>

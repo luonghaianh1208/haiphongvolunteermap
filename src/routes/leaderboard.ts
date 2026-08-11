@@ -11,7 +11,6 @@ router.get('/api/leaderboard', asyncHandler(async (req, res) => {
   const topVolunteers = await db.select({
     id: users.id,
     fullName: users.fullName,
-    unionUnit: users.unionUnit,
     reputationPoints: users.reputationPoints,
     volunteerHours: users.volunteerHours,
     activitiesCount: users.activitiesCount,

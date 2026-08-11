@@ -115,7 +115,7 @@ export default function CheckinPage() {
                           <ShieldCheck className="w-4 h-4 text-sky-300 fill-sky-300/20" />
                         </h3>
                         <p className="text-xs text-blue-200">
-                          {dbUser?.unionUnit || 'Đoàn Thanh Niên Hải Phòng'}
+                          {dbUser?.unitName || 'Đoàn Thanh Niên Hải Phòng'}
                         </p>
                         <p className="text-xs text-amber-300 font-mono mt-1 font-bold">
                           Mã ID: {tnvCode}
