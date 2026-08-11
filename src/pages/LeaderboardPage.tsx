@@ -121,7 +121,7 @@ export default function LeaderboardPage() {
                       {getRankBadge(idx)}
                       <div>
                         <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                          {vol.fullName || vol.email}
+                          {vol.fullName || 'Đoàn viên chưa cập nhật tên'}
                           {vol.isVerified && (
                             <ShieldCheck className="w-4 h-4 text-blue-600 fill-blue-600/20" title="Đoàn viên đã xác minh" />
                           )}
