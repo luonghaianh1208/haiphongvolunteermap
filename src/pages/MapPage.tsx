@@ -37,9 +37,22 @@ export const HAI_PHONG_BOUNDS: LatLngBoundsExpression = [
   [21.24, 107.22],
 ];
 
+/** Chuẩn hóa chuỗi để tìm kiếm: bỏ dấu, thường hóa. "Đồ Sơn" -> "do son" */
+function normalize(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .trim();
+}
+
 export default function MapPage() {
   const [activities, setActivities] = useState<any[]>([]);
   const [boundary, setBoundary] = useState<any>(null);
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('all');
 
   useEffect(() => {
     fetch('/api/activities')
@@ -55,7 +68,17 @@ export default function MapPage() {
       .catch(() => setBoundary(null)); // không có ranh giới thì bản đồ vẫn chạy
   }, []);
 
-  const filteredActivities = activities;
+  const categories = Array.from(
+    new Set(activities.map(a => a.category).filter(Boolean))
+  ).sort();
+
+  const filteredActivities = activities.filter(act => {
+    if (category !== 'all' && act.category !== category) return false;
+    if (search.trim() === '') return true;
+    const needle = normalize(search);
+    return normalize(act.title || '').includes(needle)
+        || normalize(act.location || '').includes(needle);
+  });
 
   return (
     <div className="space-y-4">
@@ -70,6 +93,27 @@ export default function MapPage() {
 
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Tìm theo tên hoạt động hoặc địa điểm..."
+            aria-label="Tìm kiếm hoạt động"
+            className="h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-medium bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px] flex-1 md:flex-none md:w-64"
+          />
+
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            aria-label="Lọc theo lĩnh vực"
+            className="h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-semibold bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px] flex-1 md:flex-none"
+          >
+            <option value="all">Tất cả lĩnh vực</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+
           {/* Map Legend */}
           <div className="flex items-center gap-3 text-[11px] font-medium bg-slate-100 px-3 py-2.5 rounded-xl border border-slate-200/80 shrink-0">
             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Đủ TNV</span>
@@ -134,6 +178,14 @@ export default function MapPage() {
             );
           })}
         </MapContainer>
+
+        {filteredActivities.length === 0 && (
+          <div className="absolute inset-0 z-[1000] flex items-center justify-center pointer-events-none">
+            <div className="bg-white/95 px-5 py-3 rounded-xl border border-slate-200 shadow-md text-sm font-semibold text-slate-700">
+              Không có hoạt động nào khớp bộ lọc
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
