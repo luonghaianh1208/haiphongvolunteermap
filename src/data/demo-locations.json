@@ -1,0 +1,22 @@
+[
+  { "ten": "Nhà hát Thành phố Hải Phòng", "diaChi": "Quảng trường Nhà hát, Hải Phòng", "lat": 20.857, "lng": 106.683 },
+  { "ten": "Cảng Hải Phòng", "diaChi": "Khu vực cảng, Hải Phòng", "lat": 20.86, "lng": 106.69 },
+  { "ten": "Khu du lịch Đồ Sơn", "diaChi": "Đồ Sơn, Hải Phòng", "lat": 20.71, "lng": 106.78 },
+  { "ten": "Đảo Cát Bà", "diaChi": "Đặc khu Cát Hải, Hải Phòng", "lat": 20.728, "lng": 107.048 },
+  { "ten": "Khu công nghiệp Thủy Nguyên", "diaChi": "Thủy Nguyên, Hải Phòng", "lat": 20.933, "lng": 106.654 },
+  { "ten": "Trung tâm Kiến An", "diaChi": "Kiến An, Hải Phòng", "lat": 20.81, "lng": 106.63 },
+  { "ten": "Khu dân cư An Dương", "diaChi": "An Dương, Hải Phòng", "lat": 20.89, "lng": 106.61 },
+  { "ten": "Trung tâm Vĩnh Bảo", "diaChi": "Vĩnh Bảo, Hải Phòng", "lat": 20.66, "lng": 106.48 },
+  { "ten": "Bãi biển Tiên Lãng", "diaChi": "Tiên Lãng, Hải Phòng", "lat": 20.72, "lng": 106.57 },
+  { "ten": "Trung tâm An Lão", "diaChi": "An Lão, Hải Phòng", "lat": 20.79, "lng": 106.55 },
+  { "ten": "Trung tâm Hải Dương", "diaChi": "Khu vực Hải Dương cũ, Hải Phòng", "lat": 20.94, "lng": 106.33 },
+  { "ten": "Đền Kiếp Bạc, Chí Linh", "diaChi": "Chí Linh, Hải Phòng", "lat": 21.14, "lng": 106.38 },
+  { "ten": "Khu di tích Kinh Môn", "diaChi": "Kinh Môn, Hải Phòng", "lat": 21.0, "lng": 106.5 },
+  { "ten": "Trung tâm Gia Lộc", "diaChi": "Gia Lộc, Hải Phòng", "lat": 20.88, "lng": 106.29 },
+  { "ten": "Trung tâm Bình Giang", "diaChi": "Bình Giang, Hải Phòng", "lat": 20.9, "lng": 106.18 },
+  { "ten": "Vùng vải Thanh Hà", "diaChi": "Thanh Hà, Hải Phòng", "lat": 20.92, "lng": 106.43 },
+  { "ten": "Trung tâm Tứ Kỳ", "diaChi": "Tứ Kỳ, Hải Phòng", "lat": 20.83, "lng": 106.42 },
+  { "ten": "Trung tâm Ninh Giang", "diaChi": "Ninh Giang, Hải Phòng", "lat": 20.75, "lng": 106.34 },
+  { "ten": "Trung tâm Nam Sách", "diaChi": "Nam Sách, Hải Phòng", "lat": 21.01, "lng": 106.34 },
+  { "ten": "Trung tâm Cẩm Giàng", "diaChi": "Cẩm Giàng, Hải Phòng", "lat": 20.95, "lng": 106.22 }
+]
