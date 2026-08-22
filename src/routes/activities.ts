@@ -19,28 +19,24 @@ router.get('/api/activities', optionalAuth, asyncHandler(async (req: AuthRequest
   const requested = typeof req.query.status === 'string' ? req.query.status : 'approved';
   const effective = isStaff ? requested : 'approved';
 
+  // Chặn trên kích thước phản hồi. KHÔNG phải phân trang — client không có
+  // cách lấy dòng thứ 201 trở đi. Khi số hoạt động approved chạm ~150,
+  // phải bổ sung cursor pagination trước khi vượt 200.
+  const rawLimit = typeof req.query.limit === 'string'
+    ? Number.parseInt(req.query.limit, 10)
+    : Number.NaN;
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0
+    ? Math.min(rawLimit, 500)
+    : 200;
+
   const allActivities = effective === 'all'
-    ? await db.select().from(activities).orderBy(desc(activities.createdAt))
+    ? await db.select().from(activities).orderBy(desc(activities.createdAt)).limit(limit)
     : await db.select().from(activities)
         .where(eq(activities.status, effective))
-        .orderBy(desc(activities.createdAt));
+        .orderBy(desc(activities.createdAt))
+        .limit(limit);
 
-  // Calculate registrations count for each activity
-  const regCounts = await db.select({
-    activityId: activityRegistrations.activityId,
-    count: sql<number>`count(*)`
-  }).from(activityRegistrations)
-    .groupBy(activityRegistrations.activityId);
-
-  const countMap = new Map<number, number>();
-  regCounts.forEach(r => countMap.set(r.activityId, Number(r.count)));
-
-  const result = allActivities.map(act => ({
-    ...act,
-    registeredCount: countMap.get(act.id) || 0
-  }));
-
-  res.json(result);
+  res.json(allActivities);
 }));
 
 // Tạo hoạt động mới (Cơ sở Đoàn / Thành Đoàn)
@@ -89,33 +85,48 @@ router.patch('/api/activities/:id/status', requireAuth, asyncHandler(async (req:
 
 // Đăng ký tham gia hoạt động
 router.post('/api/activities/:id/register', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
-  const activityId = parseInt(req.params.id);
-  const user = await getOrCreateUser(req.user!.uid, req.user!.email || '');
-
-  // Kiểm tra đăng ký trùng
-  const existing = await db.select().from(activityRegistrations)
-    .where(sql`${activityRegistrations.activityId} = ${activityId} AND ${activityRegistrations.userId} = ${user.id}`);
-
-  if (existing.length > 0) {
-    throw new HttpError(400, 'Bạn đã đăng ký hoạt động này trước đó');
+  const activityId = Number.parseInt(req.params.id, 10);
+  if (Number.isNaN(activityId)) {
+    throw new HttpError(400, 'Mã hoạt động không hợp lệ');
   }
 
-  // Đăng ký thành công + cộng 5 điểm uy tín đăng ký
-  const reg = await db.insert(activityRegistrations).values({
-    activityId,
-    userId: user.id,
-    status: 'registered'
-  }).returning();
+  const user = await getOrCreateUser(req.user!.uid, req.user!.email || '');
 
-  // Cộng điểm uy tín
-  await db.update(users)
-    .set({
-      reputationPoints: sql`${users.reputationPoints} + 5`,
-      activitiesCount: sql`${users.activitiesCount} + 1`
-    })
-    .where(eq(users.id, user.id));
+  try {
+    const registration = await db.transaction(async (tx) => {
+      const reg = await tx.insert(activityRegistrations).values({
+        activityId,
+        userId: user.id,
+        status: 'registered'
+      }).returning();
 
-  res.json({ success: true, registration: reg[0] });
+      // Bộ đếm chỉ TĂNG, vì hiện chưa có chức năng hủy đăng ký.
+      // KHI NÀO thêm chức năng hủy, phải giảm registered_count trong CÙNG
+      // transaction với lệnh xóa bản ghi đăng ký. Quên là bộ đếm lệch vĩnh viễn.
+      await tx.update(activities)
+        .set({ registeredCount: sql`${activities.registeredCount} + 1` })
+        .where(eq(activities.id, activityId));
+
+      await tx.update(users)
+        .set({
+          reputationPoints: sql`${users.reputationPoints} + 5`,
+          activitiesCount: sql`${users.activitiesCount} + 1`
+        })
+        .where(eq(users.id, user.id));
+
+      return reg[0];
+    });
+
+    res.json({ success: true, registration });
+  } catch (err: any) {
+    // 23505 = vi phạm ràng buộc duy nhất trong Postgres.
+    // Kiểm cả TÊN ràng buộc, vì bảng này có thể có ràng buộc duy nhất khác
+    // trong tương lai và ta không được hiểu nhầm thành "đã đăng ký".
+    if (err?.code === '23505' && err?.constraint === 'uniq_registrations_activity_user') {
+      throw new HttpError(400, 'Bạn đã đăng ký hoạt động này trước đó');
+    }
+    throw err;
+  }
 }));
 
 export default router;

@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { integer, pgTable, serial, text, timestamp, boolean, doublePrecision } from 'drizzle-orm/pg-core';
+import { integer, pgTable, serial, text, timestamp, boolean, doublePrecision, index, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const units = pgTable('units', {
   id: serial('id').primaryKey(),
@@ -32,7 +32,10 @@ export const users = pgTable('users', {
   activitiesCount: integer('activities_count').default(0),
   
   createdAt: timestamp('created_at').defaultNow(),
-});
+}, (t) => ({
+  reputationIdx: index('idx_users_reputation').on(t.reputationPoints),
+  unitReputationIdx: index('idx_users_unit_reputation').on(t.unitId, t.reputationPoints),
+}));
 
 export const activities = pgTable('activities', {
   id: serial('id').primaryKey(),
@@ -51,7 +54,10 @@ export const activities = pgTable('activities', {
   files: text('files'),
   status: text('status').default('pending'), // 'pending', 'approved', 'rejected'
   createdAt: timestamp('created_at').defaultNow(),
-});
+  registeredCount: integer('registered_count').notNull().default(0),
+}, (t) => ({
+  statusCreatedIdx: index('idx_activities_status_created').on(t.status, t.createdAt),
+}));
 
 export const activityRegistrations = pgTable('activity_registrations', {
   id: serial('id').primaryKey(),
@@ -60,7 +66,10 @@ export const activityRegistrations = pgTable('activity_registrations', {
   status: text('status').default('registered'), // 'registered', 'attended', 'absent'
   isReserve: boolean('is_reserve').default(false),
   createdAt: timestamp('created_at').defaultNow(),
-});
+}, (t) => ({
+  userCreatedIdx: index('idx_registrations_user_created').on(t.userId, t.createdAt),
+  activityUserUniq: uniqueIndex('uniq_registrations_activity_user').on(t.activityId, t.userId),
+}));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
   activitiesOrganized: many(activities),

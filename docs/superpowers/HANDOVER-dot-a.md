@@ -162,3 +162,35 @@ Không mục nào chặn merge.
 
 - **Ranh giới hành chính:** kho [nguyenduy1133/Free-GIS-Data](https://github.com/nguyenduy1133/Free-GIS-Data), file `Provinces.geojson`. Kho ghi *"miễn phí cho mục đích công cộng, đề nghị ghi nguồn"* — **không có giấy phép mã nguồn mở chính thức**. Đã ghi nguồn trong chú thích bản đồ. Nếu Thành Đoàn có dữ liệu ranh giới chính thức thì nên thay.
 - **Danh sách 114 đơn vị:** [Cổng thông tin Chính phủ](https://xaydungchinhsach.chinhphu.vn/sap-xep-dvhc-danh-sach-114-xa-phuong-dac-khu-cua-thanh-pho-hai-phong-119250622201739743.htm) — Nghị quyết 1669/NQ-UBTVQH15, đối chiếu chéo với kho [zuydd/vn-geo](https://github.com/zuydd/vn-geo). Cơ cấu: 67 xã, 45 phường, 2 đặc khu (Cát Hải, Bạch Long Vĩ).
+
+---
+
+## 9. Đợt tối ưu hiệu năng — checklist khi có CSDL
+
+**Nhánh:** `feat/perf`. Toàn bộ 10 task của đợt này (index, cột đếm sẵn `registered_count`, chống đăng ký trùng, cache có TTL, giới hạn `limit`, chống ghi thừa ở `getOrCreateUser`, script đối chiếu số liệu...) đã qua xác minh **tĩnh**: `tsc --noEmit` 0 lỗi, `npm run build` thành công, `npm test` 15/15 đạt, và toàn bộ route sống trả đúng mã trạng thái kỳ vọng khi CSDL chưa kết nối (`health` 200, `my-activities` 401, còn lại 500 vì thiếu Postgres). **Chưa có bước nào trong đợt này chạy được với dữ liệu thật** — dưới đây là checklist thực hiện theo đúng thứ tự khi đã có Postgres, tiếp nối quy trình kết nối Supabase ở mục 3.
+
+1. **Chạy migration (Task 4)** — nhớ kiểm CSDL trống trước (xem mục 3, Bước 2 ở trên; migration này cũng không dùng `IF NOT EXISTS`).
+2. **Xác nhận 5 index tồn tại** và cột `registered_count` đã được điền đúng cho các hoạt động có sẵn. Migration dọn đăng ký trùng **trước**, rồi mới điền `registered_count` từ số đăng ký đã sạch — nếu đảo ngược thứ tự đó thì số liệu sẽ bị thổi phồng đúng bằng số bản ghi trùng.
+3. **Chạy `npx tsx scripts/recount-registrations.ts`** (không kèm `--fix`) → phải báo **0 lệch**. Đây không phải bước kiểm tra qua loa: nếu báo lệch, đó là **lỗi thật cần điều tra** (không phải hiện tượng bình thường) — chỉ chạy `--fix` sau khi đã hiểu vì sao lệch, rồi kiểm lại lần nữa.
+4. **Kiểm cache tắt (giai đoạn demo):** không đặt biến `CACHE_TTL_*` nào → gọi `GET /api/stats` hai lần liên tiếp → log CSDL phải ghi nhận **hai** truy vấn riêng biệt.
+5. **Kiểm cache bật (giai đoạn production):** đặt `CACHE_TTL_STATS=600000`, khởi động lại server, gọi `/api/stats` hai lần → log chỉ còn **một** truy vấn.
+6. **Kiểm xóa cache theo sự kiện ghi:** bật `CACHE_TTL_UNITS`, thêm một đơn vị mới qua màn quản trị, mở `/profile` → đơn vị mới phải xuất hiện **ngay** trong dropdown, không cần đợi TTL hết hạn.
+7. **Kiểm chống đăng ký trùng:** bắn hai request đăng ký cùng một hoạt động **đồng thời** → chỉ tạo đúng **một** bản ghi trong `activity_registrations`, cộng đúng **+5 điểm** (không phải +10).
+8. **Kiểm giới hạn `limit`:** gọi endpoint phân trang không truyền `limit` → mặc định 200; truyền `?limit=9999` → bị chặn ở mức trần 500.
+9. **Kiểm không ghi thừa ở `getOrCreateUser`:** đăng nhập, tải lại trang `/profile` vài lần liên tiếp → log CSDL không phát sinh câu lệnh `UPDATE users` nào khi dữ liệu người dùng không đổi.
+10. **Đo hiệu năng bằng `EXPLAIN (ANALYZE, BUFFERS)`.** Migration tạo **cả 5 index lẫn dữ liệu backfill trong cùng một lần chạy**, nên không có sẵn trạng thái "đã có bảng, chưa có index" để đo "trước". Phải tự tạo trạng thái đó bằng quy trình sau, theo đúng thứ tự:
+   1. Sinh dữ liệu giả ở quy mô gần thực tế (vài chục nghìn user, vài trăm nghìn đăng ký). **Chưa có sẵn script sinh dữ liệu — phải tự viết.**
+   2. Chạy `ANALYZE` trên cả ba bảng (`users`, `activities`, `activity_registrations`). Thiếu bước này, thống kê cũ khiến planner không dùng index mới và phép đo sai lệch.
+   3. `DROP` 5 index (chỉ trên môi trường thử, **tuyệt đối không làm trên production** — `uniq_registrations_activity_user` là ràng buộc đúng đắn, không chỉ là tối ưu).
+   4. Đo `EXPLAIN (ANALYZE, BUFFERS)` cho các truy vấn cần đo — đây là số liệu "trước".
+   5. `CREATE` lại 5 index, chạy `ANALYZE` lần nữa.
+   6. Đo lại và so sánh `execution time` cùng `Buffers` — đây là số liệu "sau".
+
+   Nhắc lại: **`Seq Scan` không mặc định là lỗi** — Postgres chọn nó khi thực sự rẻ hơn. Index nào không cho cải thiện đo được ở bước 6 so với bước 4 thì nên bỏ, vì mỗi index đều làm chậm thao tác ghi.
+
+   Xem mục 9.1 của `docs/superpowers/specs/2026-08-23-toi-uu-hieu-nang-design.md` về cách đọc kết quả.
+
+### Hai điều bắt buộc phải nhớ khi đo hiệu năng
+
+- **Dùng `EXPLAIN (ANALYZE, BUFFERS)`, không dùng `EXPLAIN ANALYZE` trơn.** Và **`Seq Scan` không mặc định là lỗi** — Postgres chọn quét tuần tự khi nó thực sự rẻ hơn: trên bảng nhỏ, hoặc khi truy vấn lấy phần lớn số dòng. Ép dùng index trong tình huống đó làm **chậm đi**, không nhanh lên. Cái cần so sánh là `execution time` và `Buffers` (đặc biệt tỉ lệ `hit=`/`read=`) **trước và sau** khi thêm index, trên **cùng bộ dữ liệu** — không phải kế hoạch truy vấn cụ thể Postgres chọn. Và phải có dữ liệu đủ lớn mới đo được gì có ý nghĩa: trên bảng vài chục hay vài trăm dòng thì mọi kế hoạch đều nhanh như nhau, không phản ánh được gì về sau này khi dữ liệu lớn lên.
+- **Toàn bộ số ước tính hiệu năng trong tài liệu thiết kế (`docs/superpowers/specs/2026-08-23-toi-uu-hieu-nang-design.md`) là dự đoán, chưa đo trên dữ liệu thật.** Không trích dẫn các con số đó như kết quả đã kiểm chứng khi trình bày — phải đo lại bằng `EXPLAIN (ANALYZE, BUFFERS)` trên dữ liệu thật (hoặc dữ liệu giả quy mô gần thực tế) rồi mới có số liệu để báo cáo.

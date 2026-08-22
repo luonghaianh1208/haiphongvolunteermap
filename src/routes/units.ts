@@ -5,6 +5,8 @@ import { HttpError, asyncHandler } from '../lib/http-error.ts';
 import { db } from '../db/index.ts';
 import { units, users } from '../db/schema.ts';
 import { asc, eq, sql } from 'drizzle-orm';
+import { cached, invalidate } from '../lib/cache.ts';
+import { CACHE_TTL } from '../lib/cache-config.ts';
 
 const router = Router();
 
@@ -20,6 +22,8 @@ router.get('/api/units', optionalAuth, asyncHandler(async (req: AuthRequest, res
   const wantsAll = req.query.includeInactive === 'true' && role === 'thanh_doan';
 
   if (wantsAll) {
+    // KHÔNG BAO GIỜ cache nhánh này: dữ liệu quản trị, cần chính xác,
+    // và phụ thuộc quyền của người gọi.
     const rows = await db.select({
       id: units.id,
       name: units.name,
@@ -36,15 +40,17 @@ router.get('/api/units', optionalAuth, asyncHandler(async (req: AuthRequest, res
     return;
   }
 
-  const rows = await db.select({
-    id: units.id,
-    name: units.name,
-    type: units.type,
-    isActive: units.isActive,
-  })
-    .from(units)
-    .where(eq(units.isActive, true))
-    .orderBy(asc(units.name));
+  const rows = await cached('units:public', CACHE_TTL.units, async () => {
+    return db.select({
+      id: units.id,
+      name: units.name,
+      type: units.type,
+      isActive: units.isActive,
+    })
+      .from(units)
+      .where(eq(units.isActive, true))
+      .orderBy(asc(units.name));
+  });
 
   res.json({ units: rows });
 }));
@@ -72,6 +78,7 @@ router.post('/api/units', requireAuth, asyncHandler(async (req: AuthRequest, res
   }
 
   const created = await db.insert(units).values({ name, type }).returning();
+  invalidate('units:');
   res.json(created[0]);
 }));
 
@@ -111,6 +118,7 @@ router.patch('/api/units/:id', requireAuth, asyncHandler(async (req: AuthRequest
     throw new HttpError(404, 'Không tìm thấy đơn vị');
   }
 
+  invalidate('units:');
   res.json(updated[0]);
 }));
 
