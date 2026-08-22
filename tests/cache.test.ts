@@ -126,6 +126,48 @@ describe('cache', () => {
     expect(fn).toHaveBeenCalledTimes(10);
     expect(results).toEqual(Array(10).fill('A'));
   });
+
+  it('11. khóa được đọc thường xuyên không bị khóa rác đánh bật (LRU)', async () => {
+    const fn = vi.fn().mockResolvedValue('A');
+
+    // Làm nóng khóa 'hot', rồi lấp đầy cache bằng 499 khóa khác.
+    await cached('hot', 60_000, fn);
+    for (let i = 0; i < 499; i++) {
+      await cached(`rac${i}`, 60_000, fn);
+    }
+    expect(fn).toHaveBeenCalledTimes(500);
+
+    // Đọc lại 'hot' để đưa nó về cuối hàng đợi.
+    await cached('hot', 60_000, fn);
+    expect(fn).toHaveBeenCalledTimes(500);   // vẫn trúng cache
+
+    // Thêm 100 khóa rác nữa, vượt sức chứa.
+    for (let i = 499; i < 599; i++) {
+      await cached(`rac${i}`, 60_000, fn);
+    }
+
+    // 'hot' phải còn sống vì vừa được đọc; nếu là FIFO thì nó đã bị loại.
+    await cached('hot', 60_000, fn);
+    expect(fn).toHaveBeenCalledTimes(600);
+  });
+
+  it('12. invalidate lúc truy vấn đang bay thì kết quả cũ KHÔNG được ghi vào cache', async () => {
+    let resolveFn: (v: string) => void = () => {};
+    const cham = vi.fn(() => new Promise<string>((r) => { resolveFn = r; }));
+
+    const dangBay = cached('units:public', 60_000, cham);
+
+    // Admin sửa dữ liệu trong lúc truy vấn còn đang bay.
+    invalidate('units:');
+
+    resolveFn('DU_LIEU_CU');
+    expect(await dangBay).toBe('DU_LIEU_CU');   // người gọi vẫn nhận kết quả
+
+    // Nhưng cache KHÔNG được giữ nó lại.
+    const moi = vi.fn().mockResolvedValue('DU_LIEU_MOI');
+    expect(await cached('units:public', 60_000, moi)).toBe('DU_LIEU_MOI');
+    expect(moi).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('readTtl', () => {

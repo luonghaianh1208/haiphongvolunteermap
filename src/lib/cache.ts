@@ -14,6 +14,11 @@ const MAX_ENTRIES = 500;
 const store = new Map<string, Entry>();
 const inflight = new Map<string, Promise<unknown>>();
 
+// Tăng mỗi khi invalidate()/clearAll() chạy, để một truy vấn đang bay biết
+// dữ liệu nguồn đã đổi trong lúc nó chưa trả về và không ghi đè cache bằng
+// kết quả cũ.
+let generation = 0;
+
 export function cached<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
   // ttlMs = 0: bỏ qua hoàn toàn. Không đọc, không ghi, không gộp request trùng.
   // Đây là đường đi của giai đoạn demo — phải giống hệt như chưa từng có cache.
@@ -21,6 +26,11 @@ export function cached<T>(key: string, ttlMs: number, fn: () => Promise<T>): Pro
 
   const hit = store.get(key);
   if (hit && hit.expiresAt > Date.now()) {
+    // LRU: đọc trúng thì đưa khóa về cuối hàng đợi, để khóa nóng không bị
+    // khóa rác đánh bật ra. Không có bước này, một kẻ gọi ?unitId=1..600 sẽ
+    // đẩy hết khóa nóng khỏi cache.
+    store.delete(key);
+    store.set(key, hit);
     return Promise.resolve(hit.value as T);
   }
 
@@ -29,9 +39,16 @@ export function cached<T>(key: string, ttlMs: number, fn: () => Promise<T>): Pro
   const running = inflight.get(key);
   if (running) return running as Promise<T>;
 
+  const startedAt = generation;
+
   const promise = fn()
     .then((value) => {
-      setEntry(key, value, ttlMs);
+      // Chỉ ghi nếu chưa có invalidate nào chạy trong lúc truy vấn đang bay.
+      // Không có bước này, một truy vấn bắt đầu TRƯỚC khi admin sửa dữ liệu
+      // sẽ ghi đè kết quả cũ vào cache SAU khi lệnh xóa đã chạy.
+      if (generation === startedAt) {
+        setEntry(key, value, ttlMs);
+      }
       inflight.delete(key);
       return value;
     })
@@ -56,6 +73,7 @@ function setEntry(key: string, value: unknown, ttlMs: number): void {
 
 /** Xóa mọi khóa bắt đầu bằng `prefix`. Dùng khi dữ liệu nguồn vừa thay đổi. */
 export function invalidate(prefix: string): void {
+  generation++;
   for (const key of Array.from(store.keys())) {
     if (key.startsWith(prefix)) store.delete(key);
   }
@@ -66,6 +84,7 @@ export function invalidate(prefix: string): void {
 
 /** Chỉ dùng trong test. */
 export function clearAll(): void {
+  generation++;
   store.clear();
   inflight.clear();
 }
