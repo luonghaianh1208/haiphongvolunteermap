@@ -10,7 +10,8 @@ import { errorHandler } from './src/middleware/error-handler.ts';
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  // Coolify và các nền tảng container tiêm biến PORT; phải nghe đúng cổng đó.
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
 
