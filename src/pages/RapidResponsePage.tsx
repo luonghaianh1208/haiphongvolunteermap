@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card.tsx';
 import { Button } from '../components/ui/button.tsx';
 import { Input } from '../components/ui/input.tsx';
@@ -17,7 +17,7 @@ export default function RapidResponsePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registered, setRegistered] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = (e: FormEvent) => {
     e.preventDefault();
     if (!user) {
       toast.error('Vui lòng đăng nhập trước khi đăng ký');

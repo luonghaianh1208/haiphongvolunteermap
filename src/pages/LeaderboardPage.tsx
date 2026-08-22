@@ -1,60 +1,12 @@
-import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card.tsx';
 import { Badge } from '../components/ui/badge.tsx';
-import { Award, Trophy, Medal, Star, Flame, ShieldCheck, UserCheck } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs.tsx';
+import { Award, Star, Flame, UserCheck } from 'lucide-react';
 import { motion } from 'motion/react';
+import IndividualTab from './leaderboard/IndividualTab.tsx';
+import UnitTab from './leaderboard/UnitTab.tsx';
 
 export default function LeaderboardPage() {
-  const [topVolunteers, setTopVolunteers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/leaderboard')
-      .then(res => res.json())
-      .then(data => {
-        setTopVolunteers(data.topVolunteers || []);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
-  }, []);
-
-  const getRankBadge = (index: number) => {
-    if (index === 0) {
-      return (
-        <motion.div 
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', stiffness: 300 }}
-          className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 border border-amber-300 flex items-center justify-center font-bold shadow-sm"
-        >
-          <Trophy className="w-5 h-5 text-amber-500" />
-        </motion.div>
-      );
-    }
-    if (index === 1) {
-      return (
-        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 border border-slate-300 flex items-center justify-center font-bold shadow-sm">
-          <Medal className="w-5 h-5 text-slate-400" />
-        </div>
-      );
-    }
-    if (index === 2) {
-      return (
-        <div className="w-8 h-8 rounded-full bg-amber-900/10 text-amber-800 border border-amber-700/20 flex items-center justify-center font-bold shadow-sm">
-          <Medal className="w-5 h-5 text-amber-700" />
-        </div>
-      );
-    }
-    return (
-      <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-sm">
-        {index + 1}
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
       {/* Header Banner */}
@@ -93,56 +45,25 @@ export default function LeaderboardPage() {
         <Card className="md:col-span-2 border-slate-200 shadow-2xs">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
             <CardTitle className="text-lg font-bold flex items-center justify-between text-blue-900">
-              <span>Top Chiến Sĩ Tình Nguyện</span>
+              <span>Bảng xếp hạng</span>
               <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
                 Thành phố Hải Phòng
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {loading ? (
-              <div className="p-8 text-center text-slate-500">Đang tải bảng xếp hạng...</div>
-            ) : topVolunteers.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">Chưa có dữ liệu tình nguyện viên.</div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {topVolunteers.map((vol, idx) => (
-                  <motion.div
-                    key={vol.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05, duration: 0.3 }}
-                    whileHover={{ backgroundColor: 'rgba(241, 245, 249, 0.9)', x: 2 }}
-                    className={`p-4 flex items-center justify-between transition-all ${
-                      idx === 0 ? 'bg-amber-50/40' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      {getRankBadge(idx)}
-                      <div>
-                        <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                          {vol.fullName || vol.email}
-                          {vol.isVerified && (
-                            <ShieldCheck className="w-4 h-4 text-blue-600 fill-blue-600/20" title="Đoàn viên đã xác minh" />
-                          )}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {vol.unionUnit || 'Đoàn cơ sở Hải Phòng'}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-extrabold text-blue-700 text-base">
-                        {vol.reputationPoints || 0} <span className="text-xs font-semibold text-slate-500">Điểm</span>
-                      </div>
-                      <div className="text-xs text-slate-500 font-medium">
-                        {vol.volunteerHours || 0} Giờ tình nguyện
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
+            <Tabs defaultValue="individual">
+              <TabsList className="m-4">
+                <TabsTrigger value="individual">Cá nhân</TabsTrigger>
+                <TabsTrigger value="unit">Đơn vị</TabsTrigger>
+              </TabsList>
+              <TabsContent value="individual">
+                <IndividualTab />
+              </TabsContent>
+              <TabsContent value="unit">
+                <UnitTab />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 

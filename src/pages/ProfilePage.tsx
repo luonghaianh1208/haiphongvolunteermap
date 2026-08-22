@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useAuth } from '../lib/auth-context.tsx';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../components/ui/card.tsx';
 import { Badge } from '../components/ui/badge.tsx';
@@ -16,13 +16,15 @@ export default function ProfilePage() {
   const [isCertOpen, setIsCertOpen] = useState(false);
   const [myActivities, setMyActivities] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [unitOptions, setUnitOptions] = useState<{ id: number; name: string }[]>([]);
+  const [unitsError, setUnitsError] = useState(false);
 
   // Profile Edit State
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
     unit: '',
-    unionUnit: '',
+    unitId: '' as string,
     skills: '',
     address: '',
     cccd: ''
@@ -34,7 +36,7 @@ export default function ProfilePage() {
         fullName: dbUser.fullName || '',
         phone: dbUser.phone || '',
         unit: dbUser.unit || '',
-        unionUnit: dbUser.unionUnit || '',
+        unitId: dbUser.unitId ? String(dbUser.unitId) : '',
         skills: dbUser.skills || '',
         address: dbUser.address || '',
         cccd: dbUser.cccd || ''
@@ -43,6 +45,16 @@ export default function ProfilePage() {
 
     fetchMyActivities();
   }, [dbUser]);
+
+  useEffect(() => {
+    fetch('/api/units')
+      .then(res => res.json())
+      .then(data => setUnitOptions(data.units || []))
+      .catch(err => {
+        console.error(err);
+        setUnitsError(true);
+      });
+  }, []);
 
   const fetchMyActivities = () => {
     if (!user) return;
@@ -58,7 +70,7 @@ export default function ProfilePage() {
     });
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
@@ -216,7 +228,7 @@ export default function ProfilePage() {
             </div>
             <div className="space-y-1">
               <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block">Đơn vị Đoàn trực thuộc</span>
-              <span className="font-semibold text-slate-900">{dbUser?.unionUnit || 'Đoàn Thanh Niên Hải Phòng'}</span>
+              <span className="font-semibold text-slate-900">{dbUser?.unitName || 'Chưa chọn đơn vị'}</span>
             </div>
             <div className="space-y-1">
               <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block">Đơn vị học tập / công tác</span>
@@ -333,14 +345,33 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="unionUnit" className="text-xs font-bold text-slate-700">Đoàn cơ sở trực thuộc</Label>
-              <Input
-                id="unionUnit"
-                value={formData.unionUnit}
-                onChange={(e) => setFormData({ ...formData, unionUnit: e.target.value })}
-                className="rounded-xl h-10 text-sm"
-                placeholder="VD: Quận Đoàn Lê Chân"
-              />
+              <Label htmlFor="unitId" className="text-xs font-bold text-slate-700">Đơn vị Đoàn trực thuộc</Label>
+              <select
+                id="unitId"
+                value={formData.unitId}
+                onChange={(e) => setFormData({ ...formData, unitId: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium"
+              >
+                <option value="">— Chưa chọn đơn vị —</option>
+                {dbUser?.unitId != null && !unitOptions.some((u) => u.id === dbUser.unitId) && (
+                  <option value={String(dbUser.unitId)}>
+                    {(dbUser.unitName || 'Đơn vị hiện tại')} (đã ngừng hoạt động)
+                  </option>
+                )}
+                {unitOptions.map((u) => (
+                  <option key={u.id} value={String(u.id)}>{u.name}</option>
+                ))}
+              </select>
+              {formData.unitId === '' && (
+                <p className="text-[11px] text-amber-600 font-medium">
+                  Chọn đơn vị Đoàn để được tính vào bảng xếp hạng đơn vị.
+                </p>
+              )}
+              {unitsError && (
+                <p className="text-[11px] text-red-600 font-medium">
+                  Không tải được danh sách đơn vị. Vui lòng thử lại sau.
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">

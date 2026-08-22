@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import type { LatLngBoundsExpression } from 'leaflet';
 import { Button } from '../components/ui/button.tsx';
 import { Badge } from '../components/ui/badge.tsx';
 import { Navigation, MapPin, Users, ExternalLink, Zap, ShieldCheck } from 'lucide-react';
@@ -27,47 +28,56 @@ const blueIcon = createCustomIcon('#1D4ED8');
 // Hai Phong City Center coordinates
 const DEFAULT_CENTER: [number, number] = [20.8449, 106.6881];
 
-const DISTRICT_COORDS: Record<string, [number, number]> = {
-  'Tất cả': DEFAULT_CENTER,
-  'Hồng Bàng': [20.8667, 106.6833],
-  'Ngô Quyền': [20.8491, 106.6895],
-  'Lê Chân': [20.8430, 106.6780],
-  'Hải An': [20.8522, 106.6995],
-  'Thủy Nguyên': [20.9328, 106.6542],
-  'Đồ Sơn': [20.7078, 106.7865],
-  'Cát Hải': [20.7269, 107.0478],
-};
+// Khung bao Hải Phòng sau sáp nhập với Hải Dương (hiệu lực 01/7/2025).
+// Số đo lấy từ public/haiphong-boundary.geojson (nguyenduy1133/Free-GIS-Data),
+// đã loại trừ đặc khu Bạch Long Vĩ (đo được minLat 20.598 / maxLat 21.237 /
+// minLng 106.124 / maxLng 107.212 khi bỏ đảo; làm tròn ra ngoài 2 chữ số thập phân).
+export const HAI_PHONG_BOUNDS: LatLngBoundsExpression = [
+  [20.59, 106.12],
+  [21.24, 107.22],
+];
 
-function MapRecenter({ center }: { center: [number, number] }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, 12);
-  }, [center, map]);
-  return null;
+/** Chuẩn hóa chuỗi để tìm kiếm: bỏ dấu, thường hóa. "Đồ Sơn" -> "do son" */
+function normalize(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .trim();
 }
 
 export default function MapPage() {
   const [activities, setActivities] = useState<any[]>([]);
-  const [selectedDistrict, setSelectedDistrict] = useState('Tất cả');
-  const [center, setCenter] = useState<[number, number]>(DEFAULT_CENTER);
+  const [boundary, setBoundary] = useState<any>(null);
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('all');
 
   useEffect(() => {
     fetch('/api/activities')
       .then(res => res.json())
-      .then(data => setActivities(data))
+      .then(data => setActivities(Array.isArray(data) ? data : []))
       .catch(console.error);
   }, []);
 
-  const handleDistrictChange = (districtName: string) => {
-    setSelectedDistrict(districtName);
-    if (DISTRICT_COORDS[districtName]) {
-      setCenter(DISTRICT_COORDS[districtName]);
-    }
-  };
+  useEffect(() => {
+    fetch('/haiphong-boundary.geojson')
+      .then(res => res.json())
+      .then(setBoundary)
+      .catch(() => setBoundary(null)); // không có ranh giới thì bản đồ vẫn chạy
+  }, []);
+
+  const categories = Array.from(
+    new Set(activities.map(a => a.category).filter(Boolean))
+  ).sort();
 
   const filteredActivities = activities.filter(act => {
-    if (selectedDistrict === 'Tất cả') return true;
-    return act.location?.includes(selectedDistrict);
+    if (category !== 'all' && act.category !== category) return false;
+    if (search.trim() === '') return true;
+    const needle = normalize(search);
+    return normalize(act.title || '').includes(needle)
+        || normalize(act.location || '').includes(needle);
   });
 
   return (
@@ -76,22 +86,31 @@ export default function MapPage() {
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-blue-950 flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-blue-700" /> Bản Đồ Số Tình Nguyện Hải Phòng
+            <MapPin className="w-5 h-5 text-blue-700" /> Bản đồ số Thanh niên tình nguyện Hải Phòng
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">Giám sát các điểm hoạt động và điều phối lực lượng theo thời gian thực</p>
         </div>
 
-        {/* District Selector & Legend */}
+        {/* Legend */}
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Tìm theo tên hoạt động hoặc địa điểm..."
+            aria-label="Tìm kiếm hoạt động"
+            className="h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-medium bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px] flex-1 md:flex-none md:w-64"
+          />
+
           <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            aria-label="Lọc theo lĩnh vực"
             className="h-11 px-3.5 rounded-xl border border-slate-200 text-xs font-semibold bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px] flex-1 md:flex-none"
-            value={selectedDistrict}
-            onChange={(e) => handleDistrictChange(e.target.value)}
           >
-            {Object.keys(DISTRICT_COORDS).map((d) => (
-              <option key={d} value={d}>
-                {d === 'Tất cả' ? 'Toàn Thành phố Hải Phòng' : `Địa bàn ${d}`}
-              </option>
+            <option value="all">Tất cả lĩnh vực</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
 
@@ -107,12 +126,25 @@ export default function MapPage() {
 
       {/* Map Canvas */}
       <div className="h-[calc(100vh-14rem)] min-h-[500px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-md relative">
-        <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }}>
+        <MapContainer
+          center={DEFAULT_CENTER}
+          zoom={10}
+          maxBounds={HAI_PHONG_BOUNDS}
+          maxBoundsViscosity={1.0}
+          minZoom={9}
+          style={{ height: '100%', width: '100%' }}
+        >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Ranh giới hành chính: Free-GIS-Data'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <MapRecenter center={center} />
+
+          {boundary && (
+            <GeoJSON
+              data={boundary}
+              style={{ color: '#1D4ED8', weight: 2, fill: false }}
+            />
+          )}
 
           {filteredActivities.map((act) => {
             if (!act.lat || !act.lng) return null;
@@ -146,6 +178,14 @@ export default function MapPage() {
             );
           })}
         </MapContainer>
+
+        {filteredActivities.length === 0 && (
+          <div className="absolute inset-0 z-[1000] flex items-center justify-center pointer-events-none">
+            <div className="bg-white/95 px-5 py-3 rounded-xl border border-slate-200 shadow-md text-sm font-semibold text-slate-700">
+              Không có hoạt động nào khớp bộ lọc
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

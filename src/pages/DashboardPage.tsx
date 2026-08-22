@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, FormEvent } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card.tsx';
 import { Button } from '../components/ui/button.tsx';
 import { Input } from '../components/ui/input.tsx';
@@ -10,6 +10,7 @@ import { Users, FileText, CheckCircle, Clock, ShieldAlert, BarChart3, Plus, Chec
 import { useAuth } from '../lib/auth-context.tsx';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
+import UnitsManager from '../components/admin/UnitsManager.tsx';
 
 export default function DashboardPage() {
   const { user, dbUser } = useAuth();
@@ -43,10 +44,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchActivities();
-  }, []);
+  }, [user]);
 
-  const fetchActivities = () => {
-    fetch('/api/activities')
+  const fetchActivities = async () => {
+    if (!user) return;
+    const token = await user.getIdToken();
+    fetch('/api/activities?status=all', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setActivities(data);
@@ -54,7 +59,7 @@ export default function DashboardPage() {
       .catch(console.error);
   };
 
-  const handleCreateActivity = async (e: React.FormEvent) => {
+  const handleCreateActivity = async (e: FormEvent) => {
     e.preventDefault();
     if (!user) {
       toast.error('Vui lòng đăng nhập để tạo chiến dịch');
@@ -288,6 +293,8 @@ export default function DashboardPage() {
           </table>
         </CardContent>
       </Card>
+
+      {dbUser?.role === 'thanh_doan' && <UnitsManager />}
 
       {/* Create Activity Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
