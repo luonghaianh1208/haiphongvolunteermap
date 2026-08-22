@@ -105,4 +105,24 @@ describe('cache', () => {
     await cached('k', 0, fn);
     expect(fn).toHaveBeenCalledTimes(3);
   });
+
+  it('9b. ttlMs = 0 thì KHÔNG gộp request trùng, kể cả khi gọi đồng thời', async () => {
+    // Dùng mảng resolver thay vì 1 biến resolveFn dùng chung: với ttlMs=0,
+    // fn() được gọi độc lập ở MỖI lần cached() (không qua inflight), nên có
+    // tới 10 promise cần resolve riêng — 1 biến dùng chung sẽ bị ghi đè và
+    // làm 9 promise còn lại treo vô thời hạn (đã xác nhận bằng thực nghiệm:
+    // bản dùng 1 biến resolveFn bị timeout, không phải fail đúng nghĩa).
+    const resolvers: Array<(v: string) => void> = [];
+    const fn = vi.fn(() => new Promise<string>((r) => { resolvers.push(r); }));
+
+    const calls = Array.from({ length: 10 }, () => cached('k', 0, fn));
+    resolvers.forEach((r) => r('A'));
+    const results = await Promise.all(calls);
+
+    // Khác hẳn test 4: ở đó ttl > 0 nên gộp còn 1 lời gọi (1 resolver).
+    // Ở đây ttl = 0 nên KHÔNG được gộp — mỗi request phải tự chạy hàm gốc
+    // (10 resolver độc lập).
+    expect(fn).toHaveBeenCalledTimes(10);
+    expect(results).toEqual(Array(10).fill('A'));
+  });
 });
