@@ -19,28 +19,24 @@ router.get('/api/activities', optionalAuth, asyncHandler(async (req: AuthRequest
   const requested = typeof req.query.status === 'string' ? req.query.status : 'approved';
   const effective = isStaff ? requested : 'approved';
 
+  // Chặn trên kích thước phản hồi. KHÔNG phải phân trang — client không có
+  // cách lấy dòng thứ 201 trở đi. Khi số hoạt động approved chạm ~150,
+  // phải bổ sung cursor pagination trước khi vượt 200.
+  const rawLimit = typeof req.query.limit === 'string'
+    ? Number.parseInt(req.query.limit, 10)
+    : Number.NaN;
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0
+    ? Math.min(rawLimit, 500)
+    : 200;
+
   const allActivities = effective === 'all'
-    ? await db.select().from(activities).orderBy(desc(activities.createdAt))
+    ? await db.select().from(activities).orderBy(desc(activities.createdAt)).limit(limit)
     : await db.select().from(activities)
         .where(eq(activities.status, effective))
-        .orderBy(desc(activities.createdAt));
+        .orderBy(desc(activities.createdAt))
+        .limit(limit);
 
-  // Calculate registrations count for each activity
-  const regCounts = await db.select({
-    activityId: activityRegistrations.activityId,
-    count: sql<number>`count(*)`
-  }).from(activityRegistrations)
-    .groupBy(activityRegistrations.activityId);
-
-  const countMap = new Map<number, number>();
-  regCounts.forEach(r => countMap.set(r.activityId, Number(r.count)));
-
-  const result = allActivities.map(act => ({
-    ...act,
-    registeredCount: countMap.get(act.id) || 0
-  }));
-
-  res.json(result);
+  res.json(allActivities);
 }));
 
 // Tạo hoạt động mới (Cơ sở Đoàn / Thành Đoàn)
