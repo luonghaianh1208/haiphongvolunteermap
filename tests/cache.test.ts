@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cached, invalidate, clearAll } from '../src/lib/cache.ts';
+import { readTtl } from '../src/lib/cache-config.ts';
 
 describe('cache', () => {
   beforeEach(() => {
@@ -124,5 +125,48 @@ describe('cache', () => {
     // (10 resolver độc lập).
     expect(fn).toHaveBeenCalledTimes(10);
     expect(results).toEqual(Array(10).fill('A'));
+  });
+});
+
+describe('readTtl', () => {
+  const TEN = 'CACHE_TTL_TEST';
+  let warn: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    delete process.env[TEN];
+    warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warn.mockRestore();
+    delete process.env[TEN];
+  });
+
+  it('10a. biến vắng mặt thì trả 0, không cảnh báo', () => {
+    expect(readTtl(TEN)).toBe(0);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('10b. chuỗi toàn khoảng trắng thì trả 0, không cảnh báo', () => {
+    process.env[TEN] = '   ';
+    expect(readTtl(TEN)).toBe(0);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('10c. giá trị âm thì trả 0 KÈM cảnh báo', () => {
+    process.env[TEN] = '-5';
+    expect(readTtl(TEN)).toBe(0);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('10d. giá trị không phải số thì trả 0 KÈM cảnh báo', () => {
+    process.env[TEN] = 'abc';
+    expect(readTtl(TEN)).toBe(0);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('10e. giá trị hợp lệ thì trả đúng số', () => {
+    process.env[TEN] = '600000';
+    expect(readTtl(TEN)).toBe(600000);
   });
 });
