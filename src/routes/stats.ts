@@ -15,15 +15,19 @@ router.get('/api/health', (req, res) => {
 // Thống kê tổng quan Thành Đoàn Hải Phòng
 router.get('/api/stats', asyncHandler(async (req, res) => {
   const payload = await cached('stats', CACHE_TTL.stats, async () => {
-    const totalVolunteers = await db.select({ count: sql<number>`count(*)` }).from(users);
+    // Gộp 3 số đo trên bảng users vào một lần quét thay vì hai lượt truy vấn.
+    const userStats = await db.select({
+      total: sql<number>`count(*)`,
+      verified: sql<number>`count(*) FILTER (WHERE ${users.isVerified})`,
+      hours: sql<number>`COALESCE(sum(${users.volunteerHours}), 0)`,
+    }).from(users);
     const totalActivities = await db.select({ count: sql<number>`count(*)` }).from(activities);
-    const sumHours = await db.select({ total: sql<number>`COALESCE(sum(${users.volunteerHours}), 0)` }).from(users);
 
     return {
-      totalVolunteers: Number(totalVolunteers[0]?.count || 0) + 1250, // cộng số thực tế tiêu chuẩn Hải Phòng
+      totalVolunteers: Number(userStats[0]?.total || 0),
       totalActivities: Number(totalActivities[0]?.count || 0),
-      totalHours: Number(sumHours[0]?.total || 0) + 4820,
-      verifiedCount: 1040
+      totalHours: Number(userStats[0]?.hours || 0),
+      verifiedCount: Number(userStats[0]?.verified || 0),
     };
   });
 
