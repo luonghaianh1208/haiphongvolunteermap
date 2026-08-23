@@ -8,7 +8,8 @@ import { cn } from '../lib/utils.ts';
 import { motion } from 'motion/react';
 
 export default function HomePage() {
-  const [stats, setStats] = useState({ totalVolunteers: 1280, totalActivities: 24, totalHours: 4950, verifiedCount: 1040 });
+  // Khởi tạo 0: thà hiện 0 trong khoảnh khắc chờ /api/stats còn hơn hiện số bịa.
+  const [stats, setStats] = useState({ totalVolunteers: 0, totalActivities: 0, totalHours: 0, verifiedCount: 0 });
   const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {

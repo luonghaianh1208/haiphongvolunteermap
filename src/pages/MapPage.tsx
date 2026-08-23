@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -37,6 +37,38 @@ export const HAI_PHONG_BOUNDS: LatLngBoundsExpression = [
   [21.24, 107.22],
 ];
 
+// Vành ngoài của lớp mặt nạ: phủ trọn mặt phẳng chiếu Web Mercator.
+const WORLD_RING: [number, number][] = [
+  [-180, -85],
+  [180, -85],
+  [180, 85],
+  [-180, 85],
+  [-180, -85],
+];
+
+/**
+ * Dựng lớp mặt nạ từ ranh giới: một polygon phủ toàn cầu, khoét lỗ đúng phần
+ * Hải Phòng. Nhờ vậy mọi khu vực bên ngoài bị phủ mờ, làm nổi bật thành phố.
+ * Trả về null nếu GeoJSON không có polygon nào.
+ */
+function buildMask(geojson: any): any | null {
+  const holes: [number, number][][] = [];
+  for (const feature of geojson?.features ?? []) {
+    const geom = feature?.geometry;
+    if (geom?.type === 'Polygon') {
+      holes.push(geom.coordinates[0]);
+    } else if (geom?.type === 'MultiPolygon') {
+      for (const poly of geom.coordinates) holes.push(poly[0]);
+    }
+  }
+  if (holes.length === 0) return null;
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'Polygon', coordinates: [WORLD_RING, ...holes] },
+  };
+}
+
 /** Chuẩn hóa chuỗi để tìm kiếm: bỏ dấu, thường hóa. "Đồ Sơn" -> "do son" */
 function normalize(text: string): string {
   return text
@@ -67,6 +99,8 @@ export default function MapPage() {
       .then(setBoundary)
       .catch(() => setBoundary(null)); // không có ranh giới thì bản đồ vẫn chạy
   }, []);
+
+  const mask = useMemo(() => (boundary ? buildMask(boundary) : null), [boundary]);
 
   const categories = Array.from(
     new Set(activities.map(a => a.category).filter(Boolean))
@@ -139,9 +173,23 @@ export default function MapPage() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
+          {mask && (
+            <GeoJSON
+              data={mask}
+              interactive={false}
+              style={{
+                stroke: false,
+                fillColor: '#0F172A',
+                fillOpacity: 0.5,
+                fillRule: 'evenodd',
+              }}
+            />
+          )}
+
           {boundary && (
             <GeoJSON
               data={boundary}
+              interactive={false}
               style={{ color: '#1D4ED8', weight: 2, fill: false }}
             />
           )}
